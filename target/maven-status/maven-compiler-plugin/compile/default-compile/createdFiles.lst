@@ -1,0 +1,15 @@
+me\nickax\dropconfirm\commands\CommandManager.class
+me\nickax\dropconfirm\lang\MessageManager.class
+me\nickax\dropconfirm\commands\plugin_commands\EnableCommand.class
+me\nickax\dropconfirm\drop\DropListeners.class
+me\nickax\dropconfirm\commands\plugin_commands\DisableCommand.class
+me\nickax\dropconfirm\lang\LangManager.class
+me\nickax\dropconfirm\commands\plugin_commands\ReloadCommand.class
+me\nickax\dropconfirm\DropConfirm.class
+me\nickax\dropconfirm\lang\LangFileCheck.class
+me\nickax\dropconfirm\commands\CommandAutoComplete.class
+me\nickax\dropconfirm\commands\plugin_commands\HelpCommand.class
+me\nickax\dropconfirm\data\DataManager.class
+me\nickax\dropconfirm\drop\DropListeners$1.class
+me\nickax\dropconfirm\commands\CommandBuilder.class
+me\nickax\dropconfirm\placeholderapi\Placeholders.class
