@@ -1,2 +1,2 @@
 # DropConfirm
-Prevent your users from unintentionally drop items.
+Prevent your users from accidentally drop items.
