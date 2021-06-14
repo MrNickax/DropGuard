@@ -1,0 +1,14 @@
+# DropConfirm ${project.version} lang config file.
+
+placeholders:
+  disabled-text: '&aenabled' # %status%
+  enabled-text: '&cdisabled' # %status%
+
+plugin-messages:
+  reload-message: '&6&lDropConfirm: &7Config reloaded successfully!'
+  no-permission-message: '&c&lHey! &7You don''t have enough permissions!'
+  unknown-command-message: '&6&lDropConfirm: &7Unknown command, use &e/dropconfirm help &7to see the command list!'
+  player-not-found-message: '&c&lError: &7Player &e%player% &7not found!'
+  drop-confirm-message: '&6&l[!] &7Drop the item again to confirm, you can disable this using &e/dropconfirm off! '
+  drop-confirm-toggle-message: '&6&l[!] &7Drop confirmation is now %status%!'
+  drop-confirm-toggle-message-player: '&6&l[!] &7Drop confirmation is now %status% &7for &e%player%!'
