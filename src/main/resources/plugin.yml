@@ -1,0 +1,11 @@
+name: DropConfirm
+version: ${project.version}
+main: me.nickax.dropconfirm.DropConfirm
+api-version: 1.13
+author: Nickax
+softdepend: [PlaceholderAPI]
+
+commands:
+  dropconfirm:
+    description: shows the command list
+    aliases: [dc]

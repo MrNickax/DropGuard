@@ -1,0 +1,39 @@
+# DropConfirm ${project.version} Config
+
+language: en
+languages:
+  - en
+  - es
+
+general:
+  check-for-updates: true
+
+mysql:
+  enabled: false
+  host: localhost
+  port: 3306
+  database: dropconfirm
+  username: root
+  password: password
+  ssl: false
+
+data:
+  auto-save: true
+  save-delay: 12000
+  # 1200 Ticks = 60s
+
+drop:
+  confirm-per-item: true
+  confirm-message: true
+  reset-on-pickup: true
+  timer: 10
+
+item-list:
+  enabled: false
+  normal-items:
+  # - ALL
+    - DIAMOND_SWORD
+  custom-items:
+    example_item:
+      material: DIAMOND_SWORD
+      name: '&aExample Item'
