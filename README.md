@@ -2,10 +2,8 @@
 The ultimate solution to prevent accidental item drops in Minecraft.  
 
 ![GitHub Release](https://img.shields.io/github/v/release/MrNickax/DropGuard?style=flat-square)  
-![Maven Central](https://img.shields.io/maven-central/v/com.example/DropGuard?style=flat-square)  
-![Spigot Downloads](https://img.shields.io/spiget/downloads/DropGuard?style=flat-square)  
 
-[📥 **Downloads**](https://github.com/MrNickax/DropGuard/releases) • [📖 **Wiki**](https://github.com/MrNickax/DropGuard/wiki) • [💬 **Discord**](https://discord.gg/XXXXX)  
+[📥 **Downloads**](https://github.com/MrNickax/DropGuard/releases) • [📖 **Wiki**](https://github.com/MrNickax/DropGuard/wiki) • [💬 **Discord**]
 
 ## **About**  
 DropGuard is a **Minecraft plugin** designed to **prevent accidental item drops** by requiring player confirmation. It is **fully configurable** and supports **custom item lists, placeholders, multiple languages, and database storage**.  
