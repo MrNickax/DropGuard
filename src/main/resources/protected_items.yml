@@ -1,0 +1,17 @@
+# This configuration file specifies the items that are protected by DropGuard.
+# Each item is indicated by a key (e.g. basic_item, custom_item) and their properties.
+
+basic_item:
+  # 'material' specifies the material of the item.
+  # If set to 'ALL', every material type is protected.
+  material: ALL
+
+custom_item:
+  # 'material' here is set to DIAMOND_SWORD, hence only the diamond swords are protected.
+  material: DIAMOND_SWORD
+  properties:
+    # The item must also match this name to be protected.
+    name: '&6Legendary Sword'
+    # The item must also match this lore to be protected.
+    lore:
+      - '&6&lLEGENDARY'

@@ -1,0 +1,4 @@
+name: DropGuard
+version: '${project.version}'
+main: com.nickax.dropguard.DropGuard
+api-version: '1.13'

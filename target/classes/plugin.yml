@@ -1,0 +1,4 @@
+name: DropGuard
+version: '1.0.5'
+main: com.nickax.dropguard.DropGuard
+api-version: '1.13'

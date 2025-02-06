@@ -1,0 +1,45 @@
+# DropGuard 1.0.5 by Nickax
+
+# Enable or disable automatic updates.
+auto-update: true
+
+language:
+  # The default server language.
+  default: en_US
+
+  # The list of enabled languages.
+  enabled:
+    - en_US
+    - es_ES
+
+storage:
+  # Choose your database system: "JSON", "MYSQL", "MONGODB".
+  type: JSON
+
+  # The address of your database's machine.
+  # You can specify the port after the IP, e.g., "127.0.0.1:3306".
+  # The default port is 3306 for MySQL and 27017 for MongoDB.
+  address: 127.0.0.1
+
+  # The name of the database you want to connect to.
+  database: database
+
+  # The username for your database.
+  username: root
+
+  # The password for your database.
+  password: ''
+
+  auto-save:
+    # Enabled or disable data auto saving
+    enabled: true
+
+    # saving interval in minutes
+    interval: 5
+
+drop:
+  # Enable or disable sending of confirmation message on drop attempt.
+  send-confirmation-message: true
+
+  # The time (in seconds) within which the player has to confirm the drop.
+  confirmation-timeout: 5
