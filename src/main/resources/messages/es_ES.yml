@@ -10,6 +10,7 @@ usage: '&7Uso: &6/{command_name} &e{command_syntax}'
 language-updated: '&aTu idioma ahora es: {language}!'
 language-updated-other: '&aEl idioma de {player_name} ahora es {language}!'
 command-format: '&6/{command_name} &e{command_syntax} &8- &7{command_description}'
+help-not-found: '&cNo hay ayuda disponible para el comando: /{command_name}'
 help-format:
   - '&6Menú de ayuda de &a/{command_name}'
   - ''

@@ -20,7 +20,7 @@ public class ItemConfig extends Config {
     }
 
     private void addIfValid(String key, List<ConfigurationSection> target) {
-        ConfigurationSection section = get(key).asType(ConfigurationSection.class);
+        ConfigurationSection section = getValue(key).asType(ConfigurationSection.class);
         if (section != null) {
             target.add(section);
         }

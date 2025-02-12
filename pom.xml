@@ -6,13 +6,13 @@
 
     <groupId>com.nickax</groupId>
     <artifactId>DropGuard</artifactId>
-    <version>1.0.5</version>
+    <version>1.0.6</version>
     <packaging>jar</packaging>
 
     <name>DropGuard</name>
 
     <properties>
-        <java.version>1.8</java.version>
+        <java.version>9</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 

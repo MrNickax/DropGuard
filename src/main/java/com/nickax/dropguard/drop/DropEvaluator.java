@@ -2,8 +2,8 @@ package com.nickax.dropguard.drop;
 
 import com.nickax.dropguard.data.PlayerData;
 import com.nickax.dropguard.item.ProtectedItem;
-import com.nickax.genten.data.DataCoordinator;
-import com.nickax.genten.data.DataSource;
+import com.nickax.genten.repository.dual.DualRepository;
+import com.nickax.genten.repository.dual.TargetRepository;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -13,9 +13,9 @@ import java.util.UUID;
 public class DropEvaluator {
 
     private final List<ProtectedItem> protectedItems;
-    private final DataCoordinator<UUID, PlayerData> dataCoordinator;
+    private final DualRepository<UUID, PlayerData> dataCoordinator;
 
-    public DropEvaluator(List<ProtectedItem> protectedItems, DataCoordinator<UUID, PlayerData> dataCoordinator) {
+    public DropEvaluator(List<ProtectedItem> protectedItems, DualRepository<UUID, PlayerData> dataCoordinator) {
         this.protectedItems = protectedItems;
         this.dataCoordinator = dataCoordinator;
     }
@@ -30,7 +30,7 @@ public class DropEvaluator {
     }
 
     private boolean isNewDropAttempt(Player player, ProtectedItem item) {
-        PlayerData playerData = dataCoordinator.get(player.getUniqueId(), DataSource.CACHE);
+        PlayerData playerData = dataCoordinator.get(player.getUniqueId(), TargetRepository.ONE);
         ItemStack lastDropAttempt = playerData.getLastDropAttempt();
         return lastDropAttempt == null || !item.doesItemMatch(lastDropAttempt);
     }

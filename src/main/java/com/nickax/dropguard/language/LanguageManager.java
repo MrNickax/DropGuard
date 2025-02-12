@@ -1,12 +1,12 @@
 package com.nickax.dropguard.language;
 
 import com.nickax.dropguard.data.PlayerData;
-import com.nickax.genten.data.DataCoordinator;
-import com.nickax.genten.data.DataSource;
 import com.nickax.genten.language.Language;
 import com.nickax.genten.language.LanguageAccessor;
 import com.nickax.genten.message.MessageHolder;
-import com.nickax.genten.util.string.Replacement;
+import com.nickax.genten.repository.dual.DualRepository;
+import com.nickax.genten.repository.dual.TargetRepository;
+import com.nickax.genten.util.string.StringReplacement;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -16,26 +16,21 @@ import java.util.UUID;
 public class LanguageManager {
 
     private final LanguageAccessor languageAccessor;
-    private final DataCoordinator<UUID, PlayerData> dataCoordinator;
+    private final DualRepository<UUID, PlayerData> dataCoordinator;
 
-    public LanguageManager(LanguageAccessor languageAccessor, DataCoordinator<UUID, PlayerData> dataCoordinator) {
+    public LanguageManager(LanguageAccessor languageAccessor, DualRepository<UUID, PlayerData> dataCoordinator) {
         this.languageAccessor = languageAccessor;
         this.dataCoordinator = dataCoordinator;
     }
 
-    public void sendMessage(String id, CommandSender sender, Replacement... replacements) {
+    public void sendMessage(String id, Class<? extends MessageHolder<?>> type, CommandSender sender, StringReplacement... replacements) {
         Language language = getLanguage(sender);
-        languageAccessor.sendMessage(id, language, sender, replacements);
+        languageAccessor.sendMessage(id, type, language, sender, replacements);
     }
 
-    public MessageHolder<List<String>> getMessageList(String id, CommandSender sender) {
+    public <V, T extends MessageHolder<V>> T getMessage(String id, Class<T> type, CommandSender sender) {
         Language language = getLanguage(sender);
-        return languageAccessor.getMessageList(id, language);
-    }
-
-    public MessageHolder<String> getMessage(String id, CommandSender sender) {
-        Language language = getLanguage(sender);
-        return languageAccessor.getMessage(id, language);
+        return languageAccessor.getMessage(id, type, language);
     }
 
     public Language getLanguage(String id) {
@@ -45,11 +40,11 @@ public class LanguageManager {
     public Language getLanguage(CommandSender sender) {
         return sender instanceof Player
                 ? getLanguage((Player) sender)
-                : languageAccessor.getFallbackLanguage();
+                : languageAccessor.getDefaultLanguage();
     }
 
     public Language getLanguage(Player player) {
-        PlayerData playerData = dataCoordinator.get(player.getUniqueId(), DataSource.CACHE);
+        PlayerData playerData = dataCoordinator.get(player.getUniqueId(), TargetRepository.ONE);
         return languageAccessor.getLanguage(playerData.getLanguage());
     }
 

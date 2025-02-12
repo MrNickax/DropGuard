@@ -6,9 +6,10 @@ import com.nickax.dropguard.data.PlayerData;
 import com.nickax.dropguard.drop.DropConfirmationTimeout;
 import com.nickax.dropguard.drop.DropEvaluator;
 import com.nickax.dropguard.language.LanguageManager;
-import com.nickax.genten.data.DataCoordinator;
-import com.nickax.genten.data.DataSource;
 import com.nickax.genten.listener.SwitchableListener;
+import com.nickax.genten.message.Message;
+import com.nickax.genten.repository.dual.DualRepository;
+import com.nickax.genten.repository.dual.TargetRepository;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.player.PlayerDropItemEvent;
@@ -19,7 +20,7 @@ import java.util.UUID;
 public class DropListener extends SwitchableListener {
 
     private final DropEvaluator dropEvaluator;
-    private final DataCoordinator<UUID, PlayerData> dataCoordinator;
+    private final DualRepository<UUID, PlayerData> dataCoordinator;
     private final MainConfig mainConfig;
     private final LanguageManager languageManager;
     private final DropConfirmationTimeout confirmationTimeout;
@@ -27,7 +28,7 @@ public class DropListener extends SwitchableListener {
     public DropListener(DropGuard plugin) {
         super(plugin);
         this.dropEvaluator = plugin.getDropEvaluator();
-        this.dataCoordinator = plugin.getDataCoordinator();
+        this.dataCoordinator = plugin.getDualRepository();
         this.mainConfig = plugin.getMainConfig();
         this.languageManager = plugin.getLanguageManager();
         this.confirmationTimeout = new DropConfirmationTimeout(plugin);
@@ -47,7 +48,7 @@ public class DropListener extends SwitchableListener {
     }
 
     private boolean isDropConfirmationEnabled(Player player) {
-        PlayerData playerData = dataCoordinator.get(player.getUniqueId(), DataSource.CACHE);
+        PlayerData playerData = dataCoordinator.get(player.getUniqueId(), TargetRepository.ONE);
         return playerData.isDropConfirmationEnabled();
     }
 
@@ -58,14 +59,14 @@ public class DropListener extends SwitchableListener {
     }
 
     private void updatePlayerData(Player player, ItemStack item) {
-        PlayerData playerData = dataCoordinator.get(player.getUniqueId(), DataSource.CACHE);
+        PlayerData playerData = dataCoordinator.get(player.getUniqueId(), TargetRepository.ONE);
         playerData.setLastDropAttempt(item);
         confirmationTimeout.start(playerData, mainConfig.getDropConfirmationTimeOut());
     }
 
     private void sendConfirmationIfEnabled(Player player) {
         if (mainConfig.isConfirmationMessageEnabled()) {
-            languageManager.sendMessage("drop-confirmation", player);
+            languageManager.sendMessage("drop-confirmation", Message.class, player);
         }
     }
 }

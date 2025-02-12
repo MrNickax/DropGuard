@@ -14,19 +14,23 @@ import com.nickax.dropguard.listener.DropListener;
 import com.nickax.dropguard.listener.LanguageListener;
 import com.nickax.dropguard.listener.pickup.LegacyPickupListener;
 import com.nickax.dropguard.listener.pickup.StandardPickupListener;
-import com.nickax.dropguard.storage.StorageFactory;
-import com.nickax.genten.cache.LocalCache;
+import com.nickax.dropguard.repository.RepositoryFactory;
 import com.nickax.genten.command.CommandRegistry;
-import com.nickax.genten.data.DataCoordinator;
 import com.nickax.genten.language.Language;
 import com.nickax.genten.language.LanguageAccessor;
 import com.nickax.genten.language.LanguageLoader;
+import com.nickax.genten.library.Libraries;
+import com.nickax.genten.library.LibraryLoader;
 import com.nickax.genten.listener.SwitchableListener;
-import com.nickax.genten.storage.Storage;
-import com.nickax.genten.updater.PluginUpdater;
-import com.nickax.genten.version.SpigotVersion;
+import com.nickax.genten.plugin.PluginUpdater;
+import com.nickax.genten.repository.LocalRepository;
+import com.nickax.genten.repository.Repository;
+import com.nickax.genten.repository.dual.DualRepository;
+import com.nickax.genten.repository.dual.TargetRepository;
+import com.nickax.genten.spigot.SpigotVersion;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
@@ -39,11 +43,17 @@ public final class DropGuard extends JavaPlugin {
     private final MainConfig mainConfig = new MainConfig(this);
     private final ItemConfig itemConfig = new ItemConfig(this);
     private LanguageManager languageManager;
-    private DataCoordinator<UUID, PlayerData> dataCoordinator;
+    private DualRepository<UUID, PlayerData> dualRepository;
     private PlayerDataSaveTask playerDataSaveTask;
     private DropEvaluator dropEvaluator;
     private final List<SwitchableListener> listeners = new ArrayList<>();
-    private final PluginUpdater pluginUpdater = new PluginUpdater(this, "93135");
+    private final PluginUpdater pluginUpdater = new PluginUpdater(getLogger());
+
+    @Override
+    public void onLoad() {
+        LibraryLoader libraryLoader = new LibraryLoader(this);
+        libraryLoader.load(Libraries.MONGO_JAVA_DRIVER.get());
+    }
 
     @Override
     public void onEnable() {
@@ -101,8 +111,8 @@ public final class DropGuard extends JavaPlugin {
         return languageManager;
     }
 
-    public DataCoordinator<UUID, PlayerData> getDataCoordinator() {
-        return dataCoordinator;
+    public DualRepository<UUID, PlayerData> getDualRepository() {
+        return dualRepository;
     }
 
     public DropEvaluator getDropEvaluator() {
@@ -138,31 +148,36 @@ public final class DropGuard extends JavaPlugin {
         LanguageLoader languageLoader = new LanguageLoader(this);
         List<Language> languages = languageLoader.load(mainConfig.getEnabledLanguages());
         Language defaultLanguage = languages.stream().filter(language -> language.getId().equalsIgnoreCase(mainConfig.getDefaultLanguage())).findFirst().orElse(null);
-        languageManager = new LanguageManager(new LanguageAccessor(languages, defaultLanguage), dataCoordinator);
+        languageManager = new LanguageManager(new LanguageAccessor(languages, defaultLanguage), dualRepository);
     }
 
     private void initData() {
-        initDataCoordinator();
+        initDualRepository();
         loadPlayerData();
         startPlayerDataSaveTask();
     }
 
-    private void initDataCoordinator() {
-        Storage<UUID, PlayerData> storage = loadStorage();
-        dataCoordinator = new DataCoordinator<>(new LocalCache<>(), storage);
+    private void initDualRepository() {
+        Repository<UUID, PlayerData> database = loadDatabase();
+        dualRepository = new DualRepository<>(new LocalRepository<>(), database);
     }
 
-    private Storage<UUID, PlayerData> loadStorage() {
+    private Repository<UUID, PlayerData> loadDatabase() {
         String type = mainConfig.getStorageType();
-        return StorageFactory.build(type, this);
+        return RepositoryFactory.build(type, this);
     }
 
     private void loadPlayerData() {
-        Bukkit.getOnlinePlayers().forEach(player -> dataCoordinator.loadToCacheFromStorage(player.getUniqueId(), new PlayerData(player)));
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            PlayerData playerData = dualRepository.contains(player.getUniqueId(), TargetRepository.TWO)
+                    ? dualRepository.get(player.getUniqueId(), TargetRepository.TWO)
+                    : new PlayerData(player);
+            dualRepository.put(player.getUniqueId(), playerData, TargetRepository.ONE);
+        }
     }
 
     private void startPlayerDataSaveTask() {
-        playerDataSaveTask = new PlayerDataSaveTask(dataCoordinator);
+        playerDataSaveTask = new PlayerDataSaveTask(dualRepository);
         if (mainConfig.isDataAutoSaveEnabled()) {
             int interval = mainConfig.getDataAutoSaveInterval() * 60 * 20;
             playerDataSaveTask.runTaskTimer(this, interval, interval);
@@ -172,7 +187,7 @@ public final class DropGuard extends JavaPlugin {
     private void initDropEvaluator() {
         ProtectedItemLoader loader = new ProtectedItemLoader(this);
         List<ProtectedItem> protectedItems = loader.load(itemConfig);
-        dropEvaluator = new DropEvaluator(protectedItems, dataCoordinator);
+        dropEvaluator = new DropEvaluator(protectedItems, dualRepository);
     }
 
     private void initListeners() {
@@ -202,7 +217,7 @@ public final class DropGuard extends JavaPlugin {
 
     private void checkForUpdates() {
         getLogger().info("Checking for plugin updates...");
-        if (pluginUpdater.isUpdateAvailable()) {
+        if (pluginUpdater.isUpdateAvailable(this, 93135)) {
             handlePluginUpdate();
         } else {
             getLogger().info("Your plugin is up to date. No new updates are available");
@@ -210,7 +225,7 @@ public final class DropGuard extends JavaPlugin {
     }
 
     private void initMetrics() {
-        new Metrics(this, 93135);
+        new Metrics(this, 24689);
     }
 
     private void handlePluginUpdate() {
@@ -223,7 +238,7 @@ public final class DropGuard extends JavaPlugin {
 
     private void performPluginUpdate() {
         getLogger().info("Automatic updates are enabled. Downloading the latest version...");
-        pluginUpdater.updatePlugin();
+        pluginUpdater.update(this, 93135);
     }
 
     private void notifyUserAboutManualUpdate() {
@@ -232,7 +247,8 @@ public final class DropGuard extends JavaPlugin {
     }
 
     private void savePlayerData() {
-        Bukkit.getOnlinePlayers().forEach(player -> dataCoordinator.saveToStorageFromCache(player.getUniqueId()));
+        Bukkit.getOnlinePlayers().forEach(player ->
+                dualRepository.put(player.getUniqueId(), dualRepository.get(player.getUniqueId(), TargetRepository.ONE), TargetRepository.TWO));
     }
 
     private void unregisterListeners() {

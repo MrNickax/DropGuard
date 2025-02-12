@@ -2,8 +2,9 @@ package com.nickax.dropguard.listener;
 
 import com.nickax.dropguard.DropGuard;
 import com.nickax.dropguard.data.PlayerData;
-import com.nickax.genten.data.DataCoordinator;
 import com.nickax.genten.listener.SwitchableListener;
+import com.nickax.genten.repository.dual.DualRepository;
+import com.nickax.genten.repository.dual.TargetRepository;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.player.PlayerLoginEvent;
@@ -13,22 +14,25 @@ import java.util.UUID;
 
 public class DataListener extends SwitchableListener {
 
-    private final DataCoordinator<UUID, PlayerData> dataCoordinator;
+    private final DualRepository<UUID, PlayerData> dualRepository;
 
     public DataListener(DropGuard plugin) {
         super(plugin);
-        this.dataCoordinator = plugin.getDataCoordinator();
+        this.dualRepository = plugin.getDualRepository();
     }
 
     @EventHandler
     private void onPlayerJoin(PlayerLoginEvent event) {
         Player player = event.getPlayer();
-        dataCoordinator.loadToCacheFromStorage(player.getUniqueId(), new PlayerData(player));
+        PlayerData playerData = dualRepository.contains(player.getUniqueId(), TargetRepository.TWO)
+                ? dualRepository.get(player.getUniqueId(), TargetRepository.TWO)
+                : new PlayerData(player);
+        dualRepository.put(player.getUniqueId(), playerData, TargetRepository.ONE);
     }
 
     @EventHandler
     private void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
-        dataCoordinator.saveToStorageFromCache(player.getUniqueId());
+        dualRepository.put(player.getUniqueId(), dualRepository.get(player.getUniqueId(), TargetRepository.ONE), TargetRepository.TWO);
     }
 }
