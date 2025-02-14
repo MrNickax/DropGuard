@@ -1,257 +1,206 @@
 package com.nickax.dropguard;
 
 import com.nickax.dropguard.command.DropGuardCommand;
-import com.nickax.dropguard.config.ItemConfig;
 import com.nickax.dropguard.config.MainConfig;
 import com.nickax.dropguard.data.PlayerData;
+import com.nickax.dropguard.data.PlayerDataRepository;
 import com.nickax.dropguard.data.PlayerDataSaveTask;
 import com.nickax.dropguard.drop.DropEvaluator;
-import com.nickax.dropguard.item.ProtectedItem;
-import com.nickax.dropguard.item.loader.ProtectedItemLoader;
-import com.nickax.dropguard.language.LanguageManager;
-import com.nickax.dropguard.listener.DataListener;
-import com.nickax.dropguard.listener.DropListener;
+import com.nickax.dropguard.drop.confirmation.ConfirmationTimeoutMonitor;
 import com.nickax.dropguard.listener.LanguageListener;
+import com.nickax.dropguard.listener.PlayerDataListener;
 import com.nickax.dropguard.listener.pickup.LegacyPickupListener;
-import com.nickax.dropguard.listener.pickup.StandardPickupListener;
-import com.nickax.dropguard.repository.RepositoryFactory;
+import com.nickax.dropguard.listener.pickup.PickupListener;
+import com.nickax.dropguard.listener.DropListener;
 import com.nickax.genten.command.CommandRegistry;
+import com.nickax.genten.config.Config;
+import com.nickax.genten.item.Item;
+import com.nickax.genten.item.loader.ItemLoader;
 import com.nickax.genten.language.Language;
 import com.nickax.genten.language.LanguageAccessor;
 import com.nickax.genten.language.LanguageLoader;
 import com.nickax.genten.library.Libraries;
 import com.nickax.genten.library.LibraryLoader;
-import com.nickax.genten.listener.SwitchableListener;
+import com.nickax.genten.listener.ListenerRegistry;
 import com.nickax.genten.plugin.PluginUpdater;
+import com.nickax.genten.repository.JsonRepository;
 import com.nickax.genten.repository.LocalRepository;
 import com.nickax.genten.repository.Repository;
-import com.nickax.genten.repository.dual.DualRepository;
+import com.nickax.genten.repository.database.DatabaseLoader;
 import com.nickax.genten.repository.dual.TargetRepository;
 import com.nickax.genten.spigot.SpigotVersion;
 import org.bstats.bukkit.Metrics;
-import org.bukkit.Bukkit;
-import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.ArrayList;
+import java.io.File;
 import java.util.List;
 import java.util.UUID;
 
-public final class DropGuard extends JavaPlugin {
+public class DropGuard extends JavaPlugin {
 
+    private final LibraryLoader libraryLoader = new LibraryLoader(this);
     private final SpigotVersion version = SpigotVersion.getCurrent();
     private final MainConfig mainConfig = new MainConfig(this);
-    private final ItemConfig itemConfig = new ItemConfig(this);
-    private LanguageManager languageManager;
-    private DualRepository<UUID, PlayerData> dualRepository;
+    private PlayerDataRepository playerDataRepository;
     private PlayerDataSaveTask playerDataSaveTask;
+    private LanguageAccessor languageAccessor;
     private DropEvaluator dropEvaluator;
-    private final List<SwitchableListener> listeners = new ArrayList<>();
+    private ConfirmationTimeoutMonitor confirmationTimeoutMonitor;
+    // TODO CHECK IF THAT'S THE FINAL LOGIC I WANT FOR UPDATES
     private final PluginUpdater pluginUpdater = new PluginUpdater(getLogger());
 
     @Override
     public void onLoad() {
-        LibraryLoader libraryLoader = new LibraryLoader(this);
         libraryLoader.load(Libraries.MONGO_JAVA_DRIVER.get());
     }
 
     @Override
     public void onEnable() {
-        checkCompatibility();
-        initConfigs();
-        initData();
-        initLanguages();
-        initDropEvaluator();
-        initListeners();
-        initCommands();
-        checkForUpdates();
-        initMetrics();
+        SpigotVersion.checkCompatibility(getLogger());
+        initializePlugin();
+        pluginUpdater.checkForUpdates(this, 93135, mainConfig.isAutoUpdateEnabled());
+        loadMetrics();
     }
 
     @Override
     public void onDisable() {
-        savePlayerData();
-        unregisterListeners();
-        CommandRegistry.unregisterAll();
+        shutdownPlugin();
     }
 
     public void reload() {
-        // Reload configs:
-        mainConfig.reload();
-        itemConfig.reload();
-
-        // Reload Data
-        playerDataSaveTask.cancel();
-        savePlayerData();
-        initData();
-
-        // Reload Languages:
-        initLanguages();
-
-        initDropEvaluator();
-
-        // Reload Listeners:
-        unregisterListeners();
-        initListeners();
-
-        // Reload Commands:
-        CommandRegistry.unregisterAll();
-        initCommands();
+        shutdownPlugin();
+        initializePlugin();
     }
 
     public MainConfig getMainConfig() {
         return mainConfig;
     }
 
-    public ItemConfig getItemConfig() {
-        return itemConfig;
+    public LanguageAccessor getLanguageAccessor() {
+        return languageAccessor;
     }
 
-    public LanguageManager getLanguageManager() {
-        return languageManager;
-    }
-
-    public DualRepository<UUID, PlayerData> getDualRepository() {
-        return dualRepository;
+    public PlayerDataRepository getPlayerDataRepository() {
+        return playerDataRepository;
     }
 
     public DropEvaluator getDropEvaluator() {
         return dropEvaluator;
     }
 
-    private void checkCompatibility() {
-        if (version.equals(SpigotVersion.UNKNOWN)) {
-            Bukkit.getLogger().warning("[DropGuard] The plugin is running on an unknown version of Spigot, which may cause instability or unexpected behavior.");
-            Bukkit.getLogger().warning("[DropGuard] Proceed with caution and contact the plugin developers or refer to the documentation for further assistance if necessary.");
-        }
+    public ConfirmationTimeoutMonitor getConfirmationTimeoutMonitor() {
+        return confirmationTimeoutMonitor;
     }
 
-    private void initConfigs() {
-        initMainConfig();
-        initItemConfig();
+    private void initializePlugin() {
+        loadMainConfig();
+        loadPlayerData();
+        loadLanguages();
+        loadDropLogic();
+        loadCommands();
     }
 
-    private void initMainConfig() {
+    private void shutdownPlugin() {
+        playerDataSaveTask.cancel();
+        playerDataRepository.saveFromCacheToDatabase();
+        CommandRegistry.unregisterAll();
+        ListenerRegistry.unregisterAll();
+    }
+
+    private void loadMainConfig() {
         mainConfig.load();
         mainConfig.save();
         mainConfig.restore();
-        mainConfig.reload();
-    }
-
-    private void initItemConfig() {
-        itemConfig.load();
-        itemConfig.save();
-        itemConfig.reload();
-    }
-
-    private void initLanguages() {
-        LanguageLoader languageLoader = new LanguageLoader(this);
-        List<Language> languages = languageLoader.load(mainConfig.getEnabledLanguages());
-        Language defaultLanguage = languages.stream().filter(language -> language.getId().equalsIgnoreCase(mainConfig.getDefaultLanguage())).findFirst().orElse(null);
-        languageManager = new LanguageManager(new LanguageAccessor(languages, defaultLanguage), dualRepository);
-    }
-
-    private void initData() {
-        initDualRepository();
-        loadPlayerData();
-        startPlayerDataSaveTask();
-    }
-
-    private void initDualRepository() {
-        Repository<UUID, PlayerData> database = loadDatabase();
-        dualRepository = new DualRepository<>(new LocalRepository<>(), database);
-    }
-
-    private Repository<UUID, PlayerData> loadDatabase() {
-        String type = mainConfig.getStorageType();
-        return RepositoryFactory.build(type, this);
     }
 
     private void loadPlayerData() {
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            PlayerData playerData = dualRepository.contains(player.getUniqueId(), TargetRepository.TWO)
-                    ? dualRepository.get(player.getUniqueId(), TargetRepository.TWO)
-                    : new PlayerData(player);
-            dualRepository.put(player.getUniqueId(), playerData, TargetRepository.ONE);
-        }
+        loadPlayerDataRepository();
+        startPlayerDataSaveTask();
+        ListenerRegistry.register(new PlayerDataListener(this));
+    }
+
+    private void loadPlayerDataRepository() {
+        Repository<UUID, PlayerData> database = DatabaseLoader.load(mainConfig, PlayerData.class, getDefaultDataBase());
+        playerDataRepository = new PlayerDataRepository(new LocalRepository<>(), database);
+        playerDataRepository.loadFromDatabaseToCache();
+    }
+
+    private Repository<UUID, PlayerData> getDefaultDataBase() {
+        return new JsonRepository<>(new File(getDataFolder(), "data/player"), PlayerData.class);
     }
 
     private void startPlayerDataSaveTask() {
-        playerDataSaveTask = new PlayerDataSaveTask(dualRepository);
-        if (mainConfig.isDataAutoSaveEnabled()) {
-            int interval = mainConfig.getDataAutoSaveInterval() * 60 * 20;
-            playerDataSaveTask.runTaskTimer(this, interval, interval);
-        }
+        playerDataSaveTask = new PlayerDataSaveTask(this);
+        playerDataSaveTask.start(mainConfig);
     }
 
-    private void initDropEvaluator() {
-        ProtectedItemLoader loader = new ProtectedItemLoader(this);
-        List<ProtectedItem> protectedItems = loader.load(itemConfig);
-        dropEvaluator = new DropEvaluator(protectedItems, dualRepository);
+    private void loadLanguages() {
+        loadLanguageAccessor();
+        ListenerRegistry.register(new LanguageListener(this));
     }
 
-    private void initListeners() {
-        listeners.add(new DataListener(this));
-        listeners.add(new DropListener(this));
-        listeners.add(new LanguageListener(this));
-        addPickupListener();
-        registerListeners();
+    private void loadLanguageAccessor() {
+        List<Language> languages = getLanguages();
+        Language defaultLanguage = getDefaultLanguage(languages);
+        Repository<UUID, PlayerData> cache = playerDataRepository.get(TargetRepository.ONE);
+        languageAccessor = new LanguageAccessor(languages, defaultLanguage, cache);
     }
 
-    private void initCommands() {
-        DropGuardCommand command = new DropGuardCommand(this);
-        CommandRegistry.register(command);
+    private List<Language> getLanguages() {
+        LanguageLoader languageLoader = new LanguageLoader(this);
+        return languageLoader.load(mainConfig.getEnabledLanguages());
     }
 
-    private void addPickupListener() {
+    // TODO CLEAN METHOD
+    private Language getDefaultLanguage(List<Language> languages) {
+        return languages.stream()
+                .filter(language -> language.getId().equals(mainConfig.getDefaultLanguage()))
+                .findFirst()
+                .orElseGet(() -> {
+                    getLogger().warning(String.format("Default language '%s' not found. Using first language.", mainConfig.getDefaultLanguage()));
+                    return languages.get(0);
+                });
+    }
+
+    private void loadDropLogic() {
+        List<Item> protectedItems = loadProtectedItems();
+        dropEvaluator = new DropEvaluator(protectedItems, playerDataRepository.get(TargetRepository.ONE));
+        confirmationTimeoutMonitor = new ConfirmationTimeoutMonitor(this);
+        registerDropAndPickupListeners();
+    }
+
+    private List<Item> loadProtectedItems() {
+        Config itemConfig = loadItemConfig();
+        ItemLoader itemLoader = new ItemLoader(getLogger());
+        return itemLoader.load(itemConfig);
+    }
+
+    private Config loadItemConfig() {
+        Config itemConfig = new Config(this, "protected_items.yml", "protected_items.yml");
+        itemConfig.load();
+        itemConfig.save();
+        return itemConfig;
+    }
+    
+    private void registerDropAndPickupListeners() {
+        ListenerRegistry.register(new DropListener(this));
+        registerPickupListener();
+    }
+
+    private void registerPickupListener() {
         if (version.isAtLeast(SpigotVersion.V1_13)) {
-            listeners.add(new StandardPickupListener(this));
+            ListenerRegistry.register(new PickupListener(this));
         } else {
-            listeners.add(new LegacyPickupListener(this));
+            ListenerRegistry.register(new LegacyPickupListener(this));
         }
     }
 
-    private void registerListeners() {
-        listeners.forEach(SwitchableListener::enable);
+    private void loadCommands() {
+        DropGuardCommand dropGuardCommand = new DropGuardCommand(this);
+        CommandRegistry.register(dropGuardCommand);
     }
 
-    private void checkForUpdates() {
-        getLogger().info("Checking for plugin updates...");
-        if (pluginUpdater.isUpdateAvailable(this, 93135)) {
-            handlePluginUpdate();
-        } else {
-            getLogger().info("Your plugin is up to date. No new updates are available");
-        }
-    }
-
-    private void initMetrics() {
+    private void loadMetrics() {
         new Metrics(this, 24689);
-    }
-
-    private void handlePluginUpdate() {
-        if (mainConfig.isAutoUpdateEnabled()) {
-            performPluginUpdate();
-        } else {
-            notifyUserAboutManualUpdate();
-        }
-    }
-
-    private void performPluginUpdate() {
-        getLogger().info("Automatic updates are enabled. Downloading the latest version...");
-        pluginUpdater.update(this, 93135);
-    }
-
-    private void notifyUserAboutManualUpdate() {
-        getLogger().info("Automatic updates are disabled. Visit the following link to download the update:");
-        getLogger().info("https://www.spigotmc.org/resources/93135");
-    }
-
-    private void savePlayerData() {
-        Bukkit.getOnlinePlayers().forEach(player ->
-                dualRepository.put(player.getUniqueId(), dualRepository.get(player.getUniqueId(), TargetRepository.ONE), TargetRepository.TWO));
-    }
-
-    private void unregisterListeners() {
-        listeners.forEach(SwitchableListener::disable);
     }
 }

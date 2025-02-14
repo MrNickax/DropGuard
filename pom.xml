@@ -6,7 +6,7 @@
 
     <groupId>com.nickax</groupId>
     <artifactId>DropGuard</artifactId>
-    <version>1.0.6</version>
+    <version>1.0.7</version>
     <packaging>jar</packaging>
 
     <name>DropGuard</name>
@@ -36,6 +36,10 @@
                         <relocation>
                             <pattern>org.bstats</pattern>
                             <shadedPattern>com.nickax.dropguard.bstats</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>com.nickax.genten</pattern>
+                            <shadedPattern>com.nickax.dropguard.genten</shadedPattern>
                         </relocation>
                     </relocations>
                 </configuration>

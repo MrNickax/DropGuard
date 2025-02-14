@@ -1,49 +1,41 @@
 package com.nickax.dropguard.config;
 
+import com.google.common.reflect.TypeToken;
+import com.nickax.dropguard.credential.DatabaseCredentialLoader;
 import com.nickax.genten.config.Config;
 import com.nickax.genten.credential.DatabaseCredential;
-import com.nickax.genten.credential.MongoCredential;
-import com.nickax.genten.credential.MySQLCredential;
+import com.nickax.genten.repository.database.DatabaseCredentialProvider;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.List;
 
-public class MainConfig extends Config {
+public class MainConfig extends Config implements DatabaseCredentialProvider {
 
     public MainConfig(JavaPlugin plugin) {
         super(plugin, "config.yml", "config.yml");
-    }
-
-    public String getDefaultLanguage() {
-        return getValue("language.default").asType(String.class);
-    }
-
-    @SuppressWarnings("unchecked")
-    public List<String> getEnabledLanguages() {
-        return getValue("language.enabled").asType(List.class);
     }
 
     public boolean isAutoUpdateEnabled() {
         return getValue("auto-update").asType(Boolean.class);
     }
 
+    public String getDefaultLanguage() {
+        return getValue("language.default").asType(String.class);
+    }
+
+    public List<String> getEnabledLanguages() {
+        return getValue("language.enabled").asType(new TypeToken<List<String>>() {}.getType());
+    }
+
     public String getStorageType() {
         return getValue("storage.type").asType(String.class);
     }
 
+    @Override
     public DatabaseCredential getDatabaseCredential() {
-        ConfigurationSection section = getValue("storage").asType(ConfigurationSection.class);
-
-        String host = section.getString("host");
-        int port = section.getInt("port");
-        String database = section.getString("database");
-        String username = section.getString("username");
-        String password = section.getString("password");
-
-        return getStorageType().equals("MONGODB")
-                ? new MongoCredential(host, String.valueOf(port), database, "dropguard", username, password)
-                : new MySQLCredential(host, String.valueOf(port), database, "dropguard", username, password);
+        ConfigurationSection databaseSection = getValue("storage").asType(ConfigurationSection.class);
+        return DatabaseCredentialLoader.load(databaseSection);
     }
 
     public boolean isDataAutoSaveEnabled() {

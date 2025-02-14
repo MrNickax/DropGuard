@@ -1,49 +1,49 @@
 package com.nickax.dropguard.data;
 
-import com.google.gson.annotations.SerializedName;
+import com.nickax.genten.language.LanguageProvider;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.UUID;
 
-public class PlayerData {
+public class PlayerData implements LanguageProvider {
 
-    @SerializedName("uuid")
-    private final UUID uniqueId;
-    @SerializedName("name")
-    private final String playerName;
-    private String language;
+    private final UUID id;
+    private final String name;
+    private String languageId;
     private boolean dropConfirmationEnabled;
     private transient ItemStack lastDropAttempt;
 
     public PlayerData(Player player) {
-        this.uniqueId = player.getUniqueId();
-        this.playerName = player.getName();
-        this.dropConfirmationEnabled = false;
+        this.id = player.getUniqueId();
+        this.name = player.getName();
+        this.dropConfirmationEnabled = true;
     }
 
-    public UUID getUniqueId() {
-        return uniqueId;
+    public UUID getId() {
+        return id;
     }
 
-    public String getPlayerName() {
-        return playerName;
+    public String getName() {
+        return name;
     }
 
-    public String getLanguage() {
-        return language;
+    @Override
+    public String getLanguageId() {
+        return languageId;
     }
 
-    public void setLanguage(String language) {
-        this.language = language;
+    @Override
+    public void setLanguageId(String languageId) {
+        this.languageId = languageId;
+    }
+
+    public void toggleDropConfirmation() {
+        setDropConfirmationEnabled(!dropConfirmationEnabled);
     }
 
     public boolean isDropConfirmationEnabled() {
         return dropConfirmationEnabled;
-    }
-
-    public void toggleDropConfirmation() {
-        this.dropConfirmationEnabled = !this.dropConfirmationEnabled;
     }
 
     public void setDropConfirmationEnabled(boolean dropConfirmationEnabled) {
@@ -52,10 +52,6 @@ public class PlayerData {
 
     public ItemStack getLastDropAttempt() {
         return lastDropAttempt;
-    }
-
-    public void removeLastDropAttempt() {
-        setLastDropAttempt(null);
     }
 
     public void setLastDropAttempt(ItemStack lastDropAttempt) {

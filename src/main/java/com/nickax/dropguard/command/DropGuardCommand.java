@@ -1,10 +1,10 @@
 package com.nickax.dropguard.command;
 
 import com.nickax.dropguard.DropGuard;
-import com.nickax.dropguard.command.messages.DropGuardCommandMessages;
 import com.nickax.genten.command.BaseCommand;
 import com.nickax.genten.command.CommandHelp;
 import com.nickax.genten.command.CommandProperties;
+import com.nickax.genten.command.messages.MultiLanguageCommandMessages;
 import org.bukkit.command.CommandSender;
 
 import java.util.List;
@@ -12,10 +12,10 @@ import java.util.List;
 public class DropGuardCommand extends BaseCommand {
 
     public DropGuardCommand(DropGuard plugin) {
-        super("dropguard", createProperties(), new DropGuardCommandMessages(plugin));
+        super("dropguard", createProperties(), createMessages(plugin));
         addSubCommand(new ReloadCommand(plugin, this));
-        addSubCommand(new LanguageCommand(plugin, this));
         addSubCommand(new ToggleCommand(plugin, this));
+        addSubCommand(new LanguageCommand(plugin, this));
     }
 
     @Override
@@ -31,14 +31,12 @@ public class DropGuardCommand extends BaseCommand {
     }
 
     private static CommandProperties createProperties() {
-        return CommandProperties.builder().setAliases(List.of("dg")).build();
+        return CommandProperties.builder()
+                .setAliases(List.of("dg"))
+                .build();
     }
 
-    private int getPage(String[] args) {
-        try {
-            return Integer.parseInt(args[0]);
-        } catch (Exception e) {
-            return 1;
-        }
+    private static MultiLanguageCommandMessages createMessages(DropGuard plugin) {
+        return MultiLanguageCommandMessages.builder(plugin.getLanguageAccessor()).build();
     }
 }

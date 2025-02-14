@@ -1,9 +1,8 @@
 package com.nickax.dropguard.drop;
 
 import com.nickax.dropguard.data.PlayerData;
-import com.nickax.dropguard.item.ProtectedItem;
-import com.nickax.genten.repository.dual.DualRepository;
-import com.nickax.genten.repository.dual.TargetRepository;
+import com.nickax.genten.item.Item;
+import com.nickax.genten.repository.Repository;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -12,26 +11,22 @@ import java.util.UUID;
 
 public class DropEvaluator {
 
-    private final List<ProtectedItem> protectedItems;
-    private final DualRepository<UUID, PlayerData> dataCoordinator;
+    private final List<Item> protectedItems;
+    private final Repository<UUID, PlayerData> cache;
 
-    public DropEvaluator(List<ProtectedItem> protectedItems, DualRepository<UUID, PlayerData> dataCoordinator) {
+    public DropEvaluator(List<Item> protectedItems, Repository<UUID, PlayerData> cache) {
         this.protectedItems = protectedItems;
-        this.dataCoordinator = dataCoordinator;
+        this.cache = cache;
     }
 
-    public boolean isDropPrevented(Player player, ItemStack item) {
-        ProtectedItem protectedItem = getProtectedItem(item);
-        return protectedItem != null && isNewDropAttempt(player, protectedItem);
+    public boolean canDrop(Player player, ItemStack item) {
+        boolean isUnprotectedItem = protectedItems.stream().noneMatch(protectedItem -> protectedItem.doesItemMatch(item));
+        return isSameDropAttempt(player, item) || isUnprotectedItem;
     }
 
-    private ProtectedItem getProtectedItem(ItemStack item) {
-        return protectedItems.stream().filter(protectedItem -> protectedItem.doesItemMatch(item)).findFirst().orElse(null);
-    }
-
-    private boolean isNewDropAttempt(Player player, ProtectedItem item) {
-        PlayerData playerData = dataCoordinator.get(player.getUniqueId(), TargetRepository.ONE);
+    private boolean isSameDropAttempt(Player player, ItemStack item) {
+        PlayerData playerData = cache.get(player.getUniqueId());
         ItemStack lastDropAttempt = playerData.getLastDropAttempt();
-        return lastDropAttempt == null || !item.doesItemMatch(lastDropAttempt);
+        return lastDropAttempt != null && lastDropAttempt.isSimilar(item);
     }
 }

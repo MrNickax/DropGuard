@@ -3,12 +3,11 @@ package com.nickax.dropguard.listener;
 import com.nickax.dropguard.DropGuard;
 import com.nickax.dropguard.config.MainConfig;
 import com.nickax.dropguard.data.PlayerData;
-import com.nickax.dropguard.drop.DropConfirmationTimeout;
 import com.nickax.dropguard.drop.DropEvaluator;
-import com.nickax.dropguard.language.LanguageManager;
+import com.nickax.dropguard.drop.confirmation.ConfirmationTimeoutMonitor;
+import com.nickax.genten.language.LanguageAccessor;
 import com.nickax.genten.listener.SwitchableListener;
-import com.nickax.genten.message.Message;
-import com.nickax.genten.repository.dual.DualRepository;
+import com.nickax.genten.repository.Repository;
 import com.nickax.genten.repository.dual.TargetRepository;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -20,53 +19,52 @@ import java.util.UUID;
 public class DropListener extends SwitchableListener {
 
     private final DropEvaluator dropEvaluator;
-    private final DualRepository<UUID, PlayerData> dataCoordinator;
+    private final Repository<UUID, PlayerData> cache;
+    private final LanguageAccessor languageAccessor;
     private final MainConfig mainConfig;
-    private final LanguageManager languageManager;
-    private final DropConfirmationTimeout confirmationTimeout;
+    private final ConfirmationTimeoutMonitor confirmationTimeoutMonitor;
 
     public DropListener(DropGuard plugin) {
         super(plugin);
         this.dropEvaluator = plugin.getDropEvaluator();
-        this.dataCoordinator = plugin.getDualRepository();
+        this.cache = plugin.getPlayerDataRepository().get(TargetRepository.ONE);
+        this.languageAccessor = plugin.getLanguageAccessor();
         this.mainConfig = plugin.getMainConfig();
-        this.languageManager = plugin.getLanguageManager();
-        this.confirmationTimeout = new DropConfirmationTimeout(plugin);
+        this.confirmationTimeoutMonitor = plugin.getConfirmationTimeoutMonitor();
     }
 
     @EventHandler
     private void onPlayerDrop(PlayerDropItemEvent event) {
         Player player = event.getPlayer();
-        if (isDropConfirmationEnabled(player)) {
-            ItemStack item = event.getItemDrop().getItemStack();
-            if (dropEvaluator.isDropPrevented(player, item)) {
-                handleDropCancellation(event, player, item);
-            } else {
-                confirmationTimeout.remove(player.getUniqueId());
-            }
+        PlayerData playerData = cache.get(player.getUniqueId());
+        if (playerData.isDropConfirmationEnabled()) {
+            processDropEvent(event, player, event.getItemDrop().getItemStack());
         }
     }
-
-    private boolean isDropConfirmationEnabled(Player player) {
-        PlayerData playerData = dataCoordinator.get(player.getUniqueId(), TargetRepository.ONE);
-        return playerData.isDropConfirmationEnabled();
+    
+    private void processDropEvent(PlayerDropItemEvent event, Player player, ItemStack item) {
+        if (dropEvaluator.canDrop(player, item)) {
+            confirmationTimeoutMonitor.cancelTimeout(player);
+        } else {
+            handleDropCancellation(event, player, item);
+        }
     }
 
     private void handleDropCancellation(PlayerDropItemEvent event, Player player, ItemStack item) {
         updatePlayerData(player, item);
-        sendConfirmationIfEnabled(player);
+        sendConfirmationMessage(player);
+        confirmationTimeoutMonitor.startTimeout(player, mainConfig.getDropConfirmationTimeOut());
         event.setCancelled(true);
     }
 
     private void updatePlayerData(Player player, ItemStack item) {
-        PlayerData playerData = dataCoordinator.get(player.getUniqueId(), TargetRepository.ONE);
+        PlayerData playerData = cache.get(player.getUniqueId());
         playerData.setLastDropAttempt(item);
-        confirmationTimeout.start(playerData, mainConfig.getDropConfirmationTimeOut());
     }
 
-    private void sendConfirmationIfEnabled(Player player) {
+    private void sendConfirmationMessage(Player player) {
         if (mainConfig.isConfirmationMessageEnabled()) {
-            languageManager.sendMessage("drop-confirmation", Message.class, player);
+            languageAccessor.sendMessage("drop-confirmation", player);
         }
     }
 }

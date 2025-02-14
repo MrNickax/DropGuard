@@ -2,101 +2,120 @@ package com.nickax.dropguard.command;
 
 import com.nickax.dropguard.DropGuard;
 import com.nickax.dropguard.data.PlayerData;
-import com.nickax.dropguard.language.LanguageManager;
 import com.nickax.genten.command.BaseCommand;
 import com.nickax.genten.command.CommandProperties;
+import com.nickax.genten.language.LanguageAccessor;
 import com.nickax.genten.message.Message;
-import com.nickax.genten.repository.dual.DualRepository;
+import com.nickax.genten.repository.Repository;
 import com.nickax.genten.repository.dual.TargetRepository;
 import com.nickax.genten.util.string.StringReplacement;
+import com.nickax.genten.util.string.StringUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class ToggleCommand extends BaseCommand {
 
-    private final LanguageManager languageManager;
-    private final DualRepository<UUID, PlayerData> dualRepository;
+    private final LanguageAccessor languageAccessor;
+    private final Repository<UUID, PlayerData> cache;
 
     public ToggleCommand(DropGuard plugin, BaseCommand parent) {
-        super("toggle", createProperties(parent), parent.getMessages());
-        this.languageManager = plugin.getLanguageManager();
-        this.dualRepository = plugin.getDualRepository();
+        super("toggle", createProperties(parent));
+        this.languageAccessor = plugin.getLanguageAccessor();
+        this.cache = plugin.getPlayerDataRepository().get(TargetRepository.ONE);
     }
 
     @Override
     public boolean onExecute(CommandSender sender, String name, String[] args) {
-        Player target;
-        if (args.length > 0) {
-            target = Bukkit.getPlayer(args[0]);
-        } else if (!(sender instanceof Player)) {
-            return invalidCommandSender(sender);
-        } else {
-            target = (Player) sender;
-        }
-
+        Player target = getTarget(sender, args);
         if (target == null) {
-            return unknownPlayer(sender);
-        } else if (target != sender && !sender.hasPermission(getPermission() + ".other")) {
-            return noPermission(sender);
+            return true;
         }
-
-        return updatePlayerData(target, sender);
+        return hasPermissionToToggle(sender, target)
+                ? performToggleAction(sender, target)
+                : notifyNoPermission(sender);
     }
 
-    private boolean usage(CommandSender sender) {
-        languageManager.sendMessage("usage", Message.class, sender, new StringReplacement("{command_name}", getFullName()), new StringReplacement("{command_syntax}", getSyntax()));
-        return true;
+    private Player getTarget(CommandSender sender, String[] args) {
+        return args.length > 0
+                ? findPlayerByName(sender, args[0])
+                : getSenderAsPlayer(sender);
+    }
+    
+    private Player findPlayerByName(CommandSender sender, String name) {
+        Player target = Bukkit.getPlayer(name);
+        return target != null
+                ? target
+                : unknownPlayer(sender);
+    }
+    
+    private Player unknownPlayer(CommandSender sender) {
+        languageAccessor.sendMessage("unknown-player", sender);
+        return null;
+    }
+    
+    private Player getSenderAsPlayer(CommandSender sender) {
+        return sender instanceof Player
+                ? (Player) sender
+                : notifyInvalidCommandSender(sender);
+    }
+    
+    private Player notifyInvalidCommandSender(CommandSender sender) {
+        languageAccessor.sendMessage("invalid-command-sender", sender);
+        return null;
     }
 
-    private boolean invalidCommandSender(CommandSender sender) {
-        languageManager.sendMessage("invalid-command-sender", Message.class, sender);
-        return true;
+    private boolean hasPermissionToToggle(CommandSender sender, Player target) {
+        return target == sender || sender.hasPermission("dropguard.toggle.other");
     }
-
-    private boolean unknownPlayer(CommandSender sender) {
-        languageManager.sendMessage("unknown-player", Message.class, sender);
-        return true;
-    }
-
-    private boolean noPermission(CommandSender sender) {
-        languageManager.sendMessage("no-permission", Message.class, sender);
-        return true;
-    }
-
-    private boolean updatePlayerData(Player target, CommandSender sender) {
-        PlayerData playerData = dualRepository.get(target.getUniqueId(), TargetRepository.ONE);
+    
+    private boolean performToggleAction(CommandSender sender, Player target) {
+        PlayerData playerData = cache.get(target.getUniqueId());
         playerData.toggleDropConfirmation();
-        confirmationToggle(target, sender, playerData.isDropConfirmationEnabled() ? "enabled" : "disabled");
+        return notifyDropConfirmationToggled(sender, target, playerData.isDropConfirmationEnabled());
+    }
+
+    // TODO CLEAN
+    private boolean notifyDropConfirmationToggled(CommandSender sender, Player target, boolean enabled) {
+        if (sender.equals(target)) {
+            languageAccessor.sendMessage("drop-confirmation-toggle", target, new StringReplacement("{status}", getStatus(sender, enabled)));
+        } else {
+            languageAccessor.sendMessage("drop-confirmation-toggle", target, new StringReplacement("{status}", getStatus(sender, enabled)));
+            languageAccessor.sendMessage("drop-confirmation-toggle-other", sender, new StringReplacement("{status}", getStatus(sender, enabled)),
+                    new StringReplacement("{player_name}", target.getName()));
+        }
         return true;
     }
 
-    private void confirmationToggle(Player target, CommandSender sender, String status) {
-        if (sender.equals(target)) {
-            languageManager.sendMessage("drop-confirmation-toggle", Message.class, sender, new StringReplacement("{status}", status));
-        } else {
-            languageManager.sendMessage("drop-confirmation-toggle-other", Message.class, sender, new StringReplacement("{status}", status), new StringReplacement("{player_name}", target.getName()));
-            languageManager.sendMessage("drop-confirmation-toggle", Message.class, target, new StringReplacement("{status}", status));
-        }
+    private String getStatus(CommandSender sender, boolean enabled) {
+        String status = enabled
+                ? languageAccessor.getMessage("drop-confirmation-status-enabled", Message.class, sender).getValue()
+                : languageAccessor.getMessage("drop-confirmation-status-disabled", Message.class, sender).getValue();
+        return StringUtil.color(status);
+    }
+
+    private boolean notifyNoPermission(CommandSender sender) {
+        languageAccessor.sendMessage("no-permission", sender);
+        return true;
     }
 
     @Override
     public List<String> onTabComplete(CommandSender sender, String name, String[] args) {
-        switch (args.length) {
-            case 1:
-                return Bukkit.getOnlinePlayers().stream().map(Player::getName).collect(Collectors.toList());
-            default:
-                return new ArrayList<>();
-        }
+        return args.length == 1
+                ? Bukkit.getOnlinePlayers().stream().map(Player::getName).collect(Collectors.toList())
+                : List.of();
     }
 
     private static CommandProperties createProperties(BaseCommand parent) {
-        return CommandProperties.builder().setSyntax("<player>").setParent(parent).setPermission("dropguard.toggle")
-                .setDescription("Toggle dropguard for yourself or for another player").build();
+        return CommandProperties.builder()
+                .setParent(parent)
+                .setSyntax("<player>")
+                .setDescription("Toggle the confirmation for yourself or for another player")
+                .setPermission("dropguard.toggle")
+                .build();
     }
 }

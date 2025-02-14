@@ -1,23 +1,28 @@
 package com.nickax.dropguard.data;
 
-import com.nickax.genten.repository.dual.DualRepository;
-import com.nickax.genten.repository.dual.TargetRepository;
-import org.bukkit.Bukkit;
+import com.nickax.dropguard.DropGuard;
+import com.nickax.dropguard.config.MainConfig;
 import org.bukkit.scheduler.BukkitRunnable;
-
-import java.util.UUID;
 
 public class PlayerDataSaveTask extends BukkitRunnable {
 
-    private final DualRepository<UUID, PlayerData> dualRepository;
+    private final DropGuard plugin;
+    private final PlayerDataRepository playerDataRepository;
 
-    public PlayerDataSaveTask(DualRepository<UUID, PlayerData> dualRepository) {
-        this.dualRepository = dualRepository;
+    public PlayerDataSaveTask(DropGuard plugin) {
+        this.plugin = plugin;
+        this.playerDataRepository = plugin.getPlayerDataRepository();
+    }
+
+    public void start(MainConfig mainConfig) {
+        if (mainConfig.isDataAutoSaveEnabled()) {
+            int interval = mainConfig.getDataAutoSaveInterval() * 60 * 20;
+            runTaskTimer(plugin, interval, interval);
+        }
     }
 
     @Override
     public void run() {
-        Bukkit.getOnlinePlayers().forEach(player ->
-                dualRepository.put(player.getUniqueId(), dualRepository.get(player.getUniqueId(), TargetRepository.ONE), TargetRepository.TWO));
+        playerDataRepository.saveFromCacheToDatabase();
     }
 }
