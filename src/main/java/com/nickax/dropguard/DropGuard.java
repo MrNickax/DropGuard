@@ -151,18 +151,20 @@ public class DropGuard extends JavaPlugin {
 
     private List<Language> getLanguages() {
         LanguageLoader languageLoader = new LanguageLoader(this);
-        return languageLoader.load(mainConfig.getEnabledLanguages());
+        return languageLoader.load(mainConfig.getEnabledLanguages(), mainConfig.getDefaultLanguage());
     }
 
-    // TODO CLEAN METHOD
     private Language getDefaultLanguage(List<Language> languages) {
         return languages.stream()
-                .filter(language -> language.getId().equals(mainConfig.getDefaultLanguage()))
+                .filter(language -> language.getId().equalsIgnoreCase(mainConfig.getDefaultLanguage()))
                 .findFirst()
-                .orElseGet(() -> {
-                    getLogger().warning(String.format("Default language '%s' not found. Using first language.", mainConfig.getDefaultLanguage()));
-                    return languages.get(0);
-                });
+                .orElseGet(() -> handleUnknownDefaultLanguage(languages));
+    }
+
+    private Language handleUnknownDefaultLanguage(List<Language> languages) {
+        getLogger().warning(String.format("Default language '%s' not found. Using first language.", mainConfig.getDefaultLanguage()));
+        getLogger().warning("The plugin cannot generate new message files for unsupported languages as the default language is not defined.");
+        return languages.get(0);
     }
 
     private void loadDropLogic() {
@@ -184,7 +186,7 @@ public class DropGuard extends JavaPlugin {
         itemConfig.save();
         return itemConfig;
     }
-    
+
     private void registerDropAndPickupListeners() {
         ListenerRegistry.register(new DropListener(this));
         registerPickupListener();

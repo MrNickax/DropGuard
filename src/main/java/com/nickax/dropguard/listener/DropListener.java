@@ -9,7 +9,6 @@ import com.nickax.genten.language.LanguageAccessor;
 import com.nickax.genten.listener.SwitchableListener;
 import com.nickax.genten.repository.Repository;
 import com.nickax.genten.repository.dual.TargetRepository;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.player.PlayerDropItemEvent;

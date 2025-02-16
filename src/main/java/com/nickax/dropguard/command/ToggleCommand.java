@@ -80,7 +80,7 @@ public class ToggleCommand extends BaseCommand {
     }
 
     private boolean notifyDropConfirmationToggled(CommandSender sender, Player target, boolean enabled) {
-        languageAccessor.sendMessage("drop-confirmation-toggle", target, new StringReplacement("{status}", getStatus(sender, enabled)));
+        languageAccessor.sendMessage("drop-confirmation-toggle", target, new StringReplacement("{status}", getStatus(target, enabled)));
         if (!sender.equals(target)) {
             languageAccessor.sendMessage("drop-confirmation-toggle-other", sender, new StringReplacement("{status}", getStatus(sender, enabled)),
                     new StringReplacement("{player_name}", target.getName()));
