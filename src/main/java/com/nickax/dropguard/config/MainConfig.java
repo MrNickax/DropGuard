@@ -4,13 +4,13 @@ import com.google.common.reflect.TypeToken;
 import com.nickax.dropguard.credential.DatabaseCredentialLoader;
 import com.nickax.genten.config.Config;
 import com.nickax.genten.credential.DatabaseCredential;
-import com.nickax.genten.repository.database.DatabaseCredentialProvider;
+import org.bukkit.Sound;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.List;
 
-public class MainConfig extends Config implements DatabaseCredentialProvider {
+public class MainConfig extends Config {
 
     public MainConfig(JavaPlugin plugin) {
         super(plugin, "config.yml", "config.yml");
@@ -28,11 +28,6 @@ public class MainConfig extends Config implements DatabaseCredentialProvider {
         return getValue("language.enabled").asType(new TypeToken<List<String>>() {}.getType());
     }
 
-    public String getStorageType() {
-        return getValue("storage.type").asType(String.class);
-    }
-
-    @Override
     public DatabaseCredential getDatabaseCredential() {
         ConfigurationSection databaseSection = getValue("storage").asType(ConfigurationSection.class);
         return DatabaseCredentialLoader.load(databaseSection);
@@ -47,10 +42,19 @@ public class MainConfig extends Config implements DatabaseCredentialProvider {
     }
 
     public boolean isConfirmationMessageEnabled() {
-        return getValue("drop.send-confirmation-message").asType(Boolean.class);
+        return getValue("confirmation.send-message").asType(Boolean.class);
+    }
+
+    public boolean isConfirmationSoundEnabled() {
+        return getValue("confirmation.play-sound.enabled").asType(Boolean.class);
+    }
+
+    public Sound getConfirmationSound() {
+        String type = getValue("confirmation.play-sound.type").asType(String.class);
+        return Sound.valueOf(type);
     }
 
     public int getDropConfirmationTimeOut() {
-        return getValue("drop.confirmation-timeout").asType(Integer.class);
+        return getValue("confirmation.timeout").asType(Integer.class);
     }
 }

@@ -9,6 +9,7 @@ import com.nickax.genten.language.LanguageAccessor;
 import com.nickax.genten.listener.SwitchableListener;
 import com.nickax.genten.repository.Repository;
 import com.nickax.genten.repository.dual.TargetRepository;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.player.PlayerDropItemEvent;
@@ -52,7 +53,7 @@ public class DropListener extends SwitchableListener {
 
     private void handleDropCancellation(PlayerDropItemEvent event, Player player, ItemStack item) {
         updatePlayerData(player, item);
-        sendConfirmationMessage(player);
+        sendConfirmationEvents(player);
         confirmationTimeoutMonitor.startTimeout(player, mainConfig.getDropConfirmationTimeOut());
         event.setCancelled(true);
     }
@@ -62,9 +63,20 @@ public class DropListener extends SwitchableListener {
         playerData.setLastDropAttempt(item);
     }
 
+    private void sendConfirmationEvents(Player player) {
+        sendConfirmationMessage(player);
+        playConfirmationSound(player);
+    }
+
     private void sendConfirmationMessage(Player player) {
         if (mainConfig.isConfirmationMessageEnabled()) {
             languageAccessor.sendMessage("drop-confirmation", player);
+        }
+    }
+
+    private void playConfirmationSound(Player player) {
+        if (mainConfig.isConfirmationSoundEnabled()) {
+            player.playSound(player.getLocation(), mainConfig.getConfirmationSound(), 1, 1);
         }
     }
 }

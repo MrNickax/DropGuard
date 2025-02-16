@@ -35,8 +35,8 @@ public class ToggleCommand extends BaseCommand {
         if (target == null) {
             return true;
         }
-        return hasPermissionToToggle(sender, target)
-                ? performToggleAction(sender, target)
+        return canToggleConfirmation(sender, target)
+                ? toggleConfirmation(sender, target)
                 : notifyNoPermission(sender);
     }
 
@@ -69,22 +69,19 @@ public class ToggleCommand extends BaseCommand {
         return null;
     }
 
-    private boolean hasPermissionToToggle(CommandSender sender, Player target) {
+    private boolean canToggleConfirmation(CommandSender sender, Player target) {
         return target == sender || sender.hasPermission("dropguard.toggle.other");
     }
     
-    private boolean performToggleAction(CommandSender sender, Player target) {
+    private boolean toggleConfirmation(CommandSender sender, Player target) {
         PlayerData playerData = cache.get(target.getUniqueId());
         playerData.toggleDropConfirmation();
         return notifyDropConfirmationToggled(sender, target, playerData.isDropConfirmationEnabled());
     }
 
-    // TODO CLEAN
     private boolean notifyDropConfirmationToggled(CommandSender sender, Player target, boolean enabled) {
-        if (sender.equals(target)) {
-            languageAccessor.sendMessage("drop-confirmation-toggle", target, new StringReplacement("{status}", getStatus(sender, enabled)));
-        } else {
-            languageAccessor.sendMessage("drop-confirmation-toggle", target, new StringReplacement("{status}", getStatus(sender, enabled)));
+        languageAccessor.sendMessage("drop-confirmation-toggle", target, new StringReplacement("{status}", getStatus(sender, enabled)));
+        if (!sender.equals(target)) {
             languageAccessor.sendMessage("drop-confirmation-toggle-other", sender, new StringReplacement("{status}", getStatus(sender, enabled)),
                     new StringReplacement("{player_name}", target.getName()));
         }

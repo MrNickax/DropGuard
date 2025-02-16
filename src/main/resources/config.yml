@@ -37,9 +37,16 @@ storage:
     # saving interval in minutes
     interval: 5
 
-drop:
-  # Enable or disable sending of confirmation message on drop attempt.
-  send-confirmation-message: true
-
+confirmation:
   # The time (in seconds) within which the player has to confirm the drop.
-  confirmation-timeout: 5
+  timeout: 5
+
+  # Enable or disable sending of confirmation message on drop attempt.
+  send-message: true
+
+  play-sound:
+    # Enable or disable playing a sound when a drop confirmation is required.
+    enabled: true
+
+    # The type of sound to play when requiring a drop confirmation.
+    type: ENTITY_VILLAGER_NO

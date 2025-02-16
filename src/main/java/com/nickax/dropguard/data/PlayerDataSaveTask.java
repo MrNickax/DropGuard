@@ -23,6 +23,6 @@ public class PlayerDataSaveTask extends BukkitRunnable {
 
     @Override
     public void run() {
-        playerDataRepository.saveFromCacheToDatabase();
+        playerDataRepository.saveFromCacheToStorage();
     }
 }

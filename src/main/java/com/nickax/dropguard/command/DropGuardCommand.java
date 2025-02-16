@@ -5,6 +5,8 @@ import com.nickax.genten.command.BaseCommand;
 import com.nickax.genten.command.CommandHelp;
 import com.nickax.genten.command.CommandProperties;
 import com.nickax.genten.command.messages.MultiLanguageCommandMessages;
+import com.nickax.genten.language.LanguageCommand;
+import com.nickax.genten.repository.dual.TargetRepository;
 import org.bukkit.command.CommandSender;
 
 import java.util.List;
@@ -15,7 +17,7 @@ public class DropGuardCommand extends BaseCommand {
         super("dropguard", createProperties(), createMessages(plugin));
         addSubCommand(new ReloadCommand(plugin, this));
         addSubCommand(new ToggleCommand(plugin, this));
-        addSubCommand(new LanguageCommand(plugin, this));
+        addSubCommand(new LanguageCommand<>(this, plugin.getLanguageAccessor(), plugin.getPlayerDataRepository().get(TargetRepository.ONE)));
     }
 
     @Override

@@ -10,17 +10,17 @@ import java.util.UUID;
 
 public class PlayerDataRepository extends DualRepository<UUID, PlayerData> {
 
-    public PlayerDataRepository(Repository<UUID, PlayerData> cache, Repository<UUID, PlayerData> database) {
-        super(cache, database);
+    public PlayerDataRepository(Repository<UUID, PlayerData> cache, Repository<UUID, PlayerData> storage) {
+        super(cache, storage);
     }
 
-    public void loadFromDatabaseToCache() {
+    public void loadFromStorageToCache() {
         for (Player player : Bukkit.getOnlinePlayers()) {
-            loadFromDatabaseToCache(player);
+            loadFromStorageToCache(player);
         }
     }
 
-    public void loadFromDatabaseToCache(Player player) {
+    public void loadFromStorageToCache(Player player) {
         UUID key = player.getUniqueId();
         PlayerData playerData = get(key, TargetRepository.TWO);
         put(
@@ -32,13 +32,13 @@ public class PlayerDataRepository extends DualRepository<UUID, PlayerData> {
         );
     }
 
-    public void saveFromCacheToDatabase() {
+    public void saveFromCacheToStorage() {
         for (Player player : Bukkit.getOnlinePlayers()) {
-            saveFromCacheToDatabase(player);
+            saveFromCacheToStorage(player);
         }
     }
 
-    public void saveFromCacheToDatabase(Player player) {
+    public void saveFromCacheToStorage(Player player) {
         UUID key = player.getUniqueId();
         PlayerData playerData = get(key, TargetRepository.ONE);
         if (playerData != null) {

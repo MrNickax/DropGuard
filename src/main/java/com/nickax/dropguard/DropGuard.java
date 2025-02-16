@@ -7,27 +7,27 @@ import com.nickax.dropguard.data.PlayerDataRepository;
 import com.nickax.dropguard.data.PlayerDataSaveTask;
 import com.nickax.dropguard.drop.DropEvaluator;
 import com.nickax.dropguard.drop.confirmation.ConfirmationTimeoutMonitor;
-import com.nickax.dropguard.listener.LanguageListener;
 import com.nickax.dropguard.listener.PlayerDataListener;
 import com.nickax.dropguard.listener.pickup.LegacyPickupListener;
 import com.nickax.dropguard.listener.pickup.PickupListener;
 import com.nickax.dropguard.listener.DropListener;
 import com.nickax.genten.command.CommandRegistry;
 import com.nickax.genten.config.Config;
+import com.nickax.genten.credential.DatabaseCredential;
 import com.nickax.genten.item.Item;
 import com.nickax.genten.item.loader.ItemLoader;
 import com.nickax.genten.language.Language;
 import com.nickax.genten.language.LanguageAccessor;
+import com.nickax.genten.language.LanguageListener;
 import com.nickax.genten.language.LanguageLoader;
 import com.nickax.genten.library.Libraries;
 import com.nickax.genten.library.LibraryLoader;
 import com.nickax.genten.listener.ListenerRegistry;
 import com.nickax.genten.plugin.PluginUpdater;
-import com.nickax.genten.repository.JsonRepository;
-import com.nickax.genten.repository.LocalRepository;
 import com.nickax.genten.repository.Repository;
-import com.nickax.genten.repository.database.DatabaseLoader;
+import com.nickax.genten.repository.cache.LocalRepository;
 import com.nickax.genten.repository.dual.TargetRepository;
+import com.nickax.genten.repository.storage.JsonRepository;
 import com.nickax.genten.spigot.SpigotVersion;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -46,8 +46,6 @@ public class DropGuard extends JavaPlugin {
     private LanguageAccessor languageAccessor;
     private DropEvaluator dropEvaluator;
     private ConfirmationTimeoutMonitor confirmationTimeoutMonitor;
-    // TODO CHECK IF THAT'S THE FINAL LOGIC I WANT FOR UPDATES
-    private final PluginUpdater pluginUpdater = new PluginUpdater(getLogger());
 
     @Override
     public void onLoad() {
@@ -58,7 +56,7 @@ public class DropGuard extends JavaPlugin {
     public void onEnable() {
         SpigotVersion.checkCompatibility(getLogger());
         initializePlugin();
-        pluginUpdater.checkForUpdates(this, 93135, mainConfig.isAutoUpdateEnabled());
+        PluginUpdater.checkForUpdates(this, 93135, mainConfig.isAutoUpdateEnabled());
         loadMetrics();
     }
 
@@ -102,7 +100,7 @@ public class DropGuard extends JavaPlugin {
 
     private void shutdownPlugin() {
         playerDataSaveTask.cancel();
-        playerDataRepository.saveFromCacheToDatabase();
+        playerDataRepository.saveFromCacheToStorage();
         CommandRegistry.unregisterAll();
         ListenerRegistry.unregisterAll();
     }
@@ -120,12 +118,17 @@ public class DropGuard extends JavaPlugin {
     }
 
     private void loadPlayerDataRepository() {
-        Repository<UUID, PlayerData> database = DatabaseLoader.load(mainConfig, PlayerData.class, getDefaultDataBase());
-        playerDataRepository = new PlayerDataRepository(new LocalRepository<>(), database);
-        playerDataRepository.loadFromDatabaseToCache();
+        Repository<UUID, PlayerData> storage = loadStorage();
+        playerDataRepository = new PlayerDataRepository(new LocalRepository<>(), storage);
+        playerDataRepository.loadFromStorageToCache();
     }
 
-    private Repository<UUID, PlayerData> getDefaultDataBase() {
+    private Repository<UUID, PlayerData> loadStorage() {
+        DatabaseCredential credential = mainConfig.getDatabaseCredential();
+        return credential != null ? credential.newDatabase(PlayerData.class) : getDefaultStorage();
+    }
+
+    private Repository<UUID, PlayerData> getDefaultStorage() {
         return new JsonRepository<>(new File(getDataFolder(), "data/player"), PlayerData.class);
     }
 
@@ -136,7 +139,7 @@ public class DropGuard extends JavaPlugin {
 
     private void loadLanguages() {
         loadLanguageAccessor();
-        ListenerRegistry.register(new LanguageListener(this));
+        ListenerRegistry.register(new LanguageListener<>(this, playerDataRepository.get(TargetRepository.ONE)));
     }
 
     private void loadLanguageAccessor() {
